@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <script>window.BAGU_STATIC = true;</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Java 八股</title>
+  <script>
+    (function () {
+      var p = (location.pathname || "/").toLowerCase();
+      var agent = /(^|\/)agent(\/|$)/.test(p);
+      document.title = agent ? "Agent与大模型" : "Java 八股";
+    })();
+  </script>
+  <style>
+
+    :root {
+      --module-bar-h: 56px;
+      --green: #58CC02;
+      --green-dark: #46A302;
+      --green-soft: #E7F8D9;
+      --blue: #1CB0F6;
+      --blue-dark: #1899D6;
+      --gold: #FFC800;
+      --red: #FF4B4B;
+      --red-soft: #FFDFE0;
+      --ink: #3C3C3C;
+      --muted: #777;
+      --line: #E5E5E5;
+      --bg: #F5F5F5;
+      --card: #FFFFFF;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      min-width: 1100px;
+    }
+
+    #app { min-height: 100%; }
+    .screen { display: none; min-height: calc(100vh - var(--module-bar-h)); }
+    .screen.active { display: block; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - var(--module-bar-h));
+    }
+
+    .sidebar {
+      background: #fff;
+      border-right: 2px solid var(--line);
+      padding: 24px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--module-bar-h));
+      position: sticky;
+      top: var(--module-bar-h);
+    }
+    .module-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: var(--module-bar-h);
+      background: #fff;
+      border-bottom: 2px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+    .module-switch {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      background: #F5F5F5;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+    }
+    .module-switch a {
+      display: flex;
+      align-items: center;
+      padding: 6px 20px;
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+    .module-switch a span { color: var(--green); }
+    .module-switch a:hover { background: #fff; }
+    .module-switch a.active {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: #3A7D00;
+    }
+
+    .side-scroll {
+      flex: 1;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .group-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: #A3A3A3;
+      letter-spacing: 0.08em;
+      padding: 14px 10px 6px;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      text-align: left;
+      border: 2px solid transparent;
+      background: transparent;
+      border-radius: 12px;
+      padding: 9px 10px;
+      font: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--ink);
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+    .nav-btn:hover { background: #F7F7F7; }
+    .nav-btn.active {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: #3A7D00;
+    }
+    .nav-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: #A3A3A3;
+      background: #F0F0F0;
+      border-radius: 999px;
+      padding: 1px 7px;
+    }
+    .nav-btn.active .nav-count { background: #fff; color: #3A7D00; }
+    .nav-count.all-done { background: var(--green); color: #fff; }
+    .nav-btn.active .nav-count.all-done { background: var(--green); color: #fff; }
+    .study-stat {
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .study-stat b { color: #3A7D00; }
+    .study-bar { height: 6px; background: #EDEDED; border-radius: 6px; overflow: hidden; margin-top: 6px; }
+    .study-bar > i { display: block; height: 100%; background: var(--green); border-radius: 6px; transition: width 0.3s ease; }
+    .hero .study-bar { max-width: 360px; margin-top: 10px; }
+
+    .sidebar-foot {
+      flex-shrink: 0;
+      padding-top: 12px;
+      border-top: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .side-action {
+      width: 100%;
+      border: 2px solid var(--line);
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .side-action:hover { border-color: var(--blue); color: var(--blue-dark); }
+    .main { padding: 36px 48px 48px; max-width: 1200px; }
+    .hero { margin-bottom: 28px; }
+    .hero h1 { font-size: 30px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.02em; }
+    .hero p { color: var(--muted); font-size: 15px; }
+    .meta { display: flex; gap: 16px; margin-top: 10px; font-size: 13px; color: var(--muted); font-weight: 700; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .kp {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      width: 100%;
+      box-shadow: var(--shadow);
+    }
+    .kp.ready {
+      cursor: pointer;
+      border-color: #CDE9B0;
+    }
+    .kp.ready:hover { border-color: var(--green); transform: translateY(-1px); }
+    .kp.locked { cursor: default; opacity: 0.85; }
+    .badge {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 14px;
+      background: #F0F0F0;
+      color: #888;
+    }
+    .kp.done .badge {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 3px 0 var(--green-dark);
+    }
+    .kp-title { font-weight: 800; font-size: 16px; }
+    .kp-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .kp-flag {
+      margin-left: auto;
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+      align-self: center;
+    }
+    .flag-ready { background: var(--green-soft); color: #3A7D00; }
+    .flag-lock { background: #F3F3F3; color: #999; }
+
+    button.btn {
+      appearance: none;
+      border: none;
+      border-radius: 16px;
+      font: inherit;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 14px 28px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: transform 0.1s ease;
+    }
+    button.btn:active { transform: translateY(2px); }
+    button.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--green); color: #fff; box-shadow: 0 4px 0 var(--green-dark); }
+    .btn-primary:active { box-shadow: 0 1px 0 var(--green-dark); }
+    .btn-blue { background: var(--blue); color: #fff; box-shadow: 0 4px 0 var(--blue-dark); }
+    .btn-blue:active { box-shadow: 0 1px 0 var(--blue-dark); }
+    .btn-ghost { background: #fff; color: var(--muted); border: 2px solid var(--line); box-shadow: none; }
+    .btn-danger { background: var(--red); color: #fff; box-shadow: 0 4px 0 #D32F2F; }
+
+    .lesson-shell { min-height: calc(100vh - var(--module-bar-h)); height: calc(100vh - var(--module-bar-h)); display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+    .lesson-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 24px;
+      border-bottom: 2px solid var(--line);
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 5;
+    }
+    .back-btn {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 6px 10px 6px 6px;
+      line-height: 1;
+    }
+    .back-btn:hover { background: #F2F2F2; color: var(--ink); }
+    .progress { flex: 1; height: 12px; background: #E5E5E5; border-radius: 10px; overflow: hidden; }
+    .progress > i { display: block; height: 100%; width: 0; background: var(--green); border-radius: 10px; transition: width 0.35s ease; }
+    .hearts { font-weight: 800; color: var(--red); font-size: 16px; min-width: 64px; text-align: right; }
+    .lesson-main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      background: #fff;
+    }
+    .lesson-toc {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 2px solid var(--line);
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .lesson-shell.no-toc .lesson-toc { display: none; }
+    .lesson-toc-head {
+      padding: 12px 14px 8px;
+      border-bottom: 2px solid var(--line);
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .lesson-toc-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      color: #A3A3A3;
+      letter-spacing: 0.08em;
+    }
+    .lesson-toc-cat { font-size: 14px; font-weight: 800; margin-top: 2px; }
+    .lesson-toc-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 8px 16px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .lesson-toc-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    .toc-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      border: 2px solid transparent;
+      background: transparent;
+      border-radius: 10px;
+      padding: 6px 8px;
+      font: inherit;
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--ink);
+      cursor: pointer;
+      margin-bottom: 2px;
+      line-height: 1.45;
+    }
+    .toc-item:hover { background: #fff; }
+    .toc-item.active {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: #3A7D00;
+    }
+    .toc-item.locked { opacity: 0.5; cursor: default; }
+    .toc-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      background: #EFEFEF;
+      color: #888;
+      margin-top: 1px;
+    }
+    .toc-item.active .toc-num { background: #fff; color: #3A7D00; box-shadow: inset 0 0 0 2px var(--green); }
+    .toc-item.done .toc-num { background: var(--green); color: #fff; box-shadow: none; }
+    .toc-title { flex: 1; }
+    .lesson-stage {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .lesson-body {
+      flex: 1;
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px 28px 16px;
+      overflow: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .lesson-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    .kicker { font-size: 12px; font-weight: 800; color: var(--blue); letter-spacing: 0.08em; margin-bottom: 6px; }
+    .lesson-body h2 { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.3; letter-spacing: -0.02em; }
+    .lead { font-size: 15px; color: var(--ink); margin-bottom: 10px; max-width: 46em; line-height: 1.65; }
+    .article { padding-bottom: 12px; }
+    .section { margin: 6px 0 20px; }
+    .section h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .col { background: #fff; border-radius: 12px; padding: 14px 16px; border: 2px solid var(--line); }
+    .img-slot {
+      border: 2px dashed #C8C8C8;
+      background: #FAFAFA;
+      border-radius: 16px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 24px;
+    }
+    .img-slot b { color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+    .img-slot span { font-size: 13px; max-width: 36em; }
+    .img-slot img { max-width: 100%; max-height: 280px; border-radius: 10px; display: block; }
+    figure { margin: 0 0 8px; }
+    figcaption { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .bar-title { flex: 1; font-weight: 800; font-size: 15px; color: var(--muted); }
+    .tag { display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; margin-bottom: 10px; }
+    .tag-cpp { background: #E8F1FF; color: #2B6CB0; }
+    .tag-java { background: var(--green-soft); color: #3A7D00; }
+    .col p { font-size: 14px; }
+    .cost { margin-top: 12px; font-size: 14px; color: #9A5B00; background: #FFF6E5; border-radius: 10px; padding: 10px 12px; }
+    .quote { font-size: 14px; color: var(--muted); border-left: 4px solid var(--green); padding-left: 12px; margin: 0 0 10px; }
+
+    .article ul, .article ol { margin: 0 0 10px; padding-left: 1.4em; max-width: 46em; font-size: 15px; line-height: 1.6; }
+    .article li { margin: 3px 0; }
+    .article ol { list-style-type: decimal; }
+    .article ol ol { list-style-type: lower-alpha; }
+    .article ol ol ol,
+    .article ol ol ul,
+    .article ul ul,
+    .article ul ol { list-style-type: disc; }
+    .article ol.list-decimal,
+    .article ul ol.list-decimal,
+    .article ol ol.list-decimal { list-style-type: decimal; }
+    .article ol.list-alpha,
+    .article ul ol.list-alpha,
+    .article ol ol.list-alpha { list-style-type: lower-alpha; }
+    .article ol.list-paren,
+    .article ul ol.list-paren,
+    .article ol ol.list-paren {
+      list-style: none;
+      padding-left: 1.8em;
+      counter-reset: list-paren;
+    }
+    .article ol.list-paren > li { position: relative; }
+    .article ol.list-paren > li::before {
+      content: counter(list-paren) "）";
+      counter-increment: list-paren;
+      position: absolute;
+      left: -1.8em;
+      width: 1.7em;
+      text-align: right;
+    }
+
+    .article li > ul,
+    .article li > ol { margin: 4px 0 2px; }
+    .article pre { background: #1F1F1F; color: #F3F3F3; border-radius: 10px; padding: 12px 14px; overflow: auto; margin: 0 0 10px; font-size: 13px; line-height: 1.55; }
+    .article code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; background: #F3F3F3; padding: 0.1em 0.35em; border-radius: 6px; }
+    .article pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+    .article .table-wrap { overflow: auto; margin: 0 0 10px; }
+    .article table { border-collapse: collapse; min-width: 320px; font-size: 14px; }
+    .article th, .article td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+    .article th { background: #F7F7F7; }
+    .article .math { font-style: italic; }
+    .article figure img { max-width: 100%; max-height: 360px; display: block; margin: 0 auto; border-radius: 10px; }
+    .article hr { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
+    .lesson-footer {
+      padding: 10px 24px 14px;
+      border-top: 2px solid var(--line);
+      background: #fff;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .lesson-footer .btn { min-width: 160px; }
+    .lesson-footer .btn-done { margin-right: auto; min-width: 0; }
+    .lesson-footer .btn-done.on { background: var(--green-soft); color: #3A7D00; border-color: #B8E986; }
+    .article .guide-link {
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px dashed #BDBDBD;
+      cursor: pointer;
+    }
+    .article .guide-link:hover { color: var(--blue-dark); border-bottom-color: var(--blue); }
+    .article .guide-link::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #D6D6D6;
+      margin-right: 6px;
+      vertical-align: 1px;
+    }
+    .article .guide-link.done::before { background: var(--green); }
+    .article .guide-link.done { color: #3A7D00; }
+
+    .prompt { font-size: 24px; font-weight: 800; margin-bottom: 22px; line-height: 1.4; }
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .choice {
+      text-align: left; background: #fff; border: 2px solid var(--line); border-bottom-width: 4px;
+      border-radius: 16px; padding: 16px 18px; font: inherit; font-size: 15px; font-weight: 600;
+      cursor: pointer; color: var(--ink); min-height: 88px;
+    }
+    .choice:hover { background: #FAFAFA; }
+    .choice.selected { border-color: var(--blue); background: #E8F7FE; color: #0B7FB3; }
+    .choice.correct { border-color: var(--green); background: #F0FDE8; color: #3A7D00; }
+    .choice.wrong { border-color: var(--red); background: var(--red-soft); color: #C53030; }
+    .choice:disabled { cursor: default; }
+
+    .flip-wrap { perspective: 1200px; margin: 8px 0; max-width: 720px; }
+    .flip { width: 100%; min-height: 240px; position: relative; transform-style: preserve-3d; transition: transform 0.5s ease; cursor: pointer; }
+    .flip.flipped { transform: rotateY(180deg); }
+    .face {
+      position: absolute; inset: 0; backface-visibility: hidden; border-radius: 20px; padding: 32px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+      border: 2px solid var(--line); background: #fff; box-shadow: var(--shadow);
+    }
+    .face.back { transform: rotateY(180deg); background: #F8FBF5; border-color: #CDE9B0; }
+    .face .hint { font-size: 13px; color: var(--muted); margin-top: 12px; }
+    .face h3 { font-size: 24px; }
+    .face p { font-size: 17px; max-width: 36em; }
+
+    .sheet { display: none; padding: 16px 40px 24px; border-top: 2px solid transparent; }
+    .sheet.show { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .sheet.ok { background: #E7F8D9; border-color: #B8E986; }
+    .sheet.bad { background: #FFDFE0; border-color: #FFB4B4; }
+    .sheet-copy { flex: 1; }
+    .sheet h4 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .sheet.ok h4 { color: #3A7D00; }
+    .sheet.bad h4 { color: #C53030; }
+    .sheet p { font-size: 15px; margin: 0; max-width: 50em; }
+    .sheet .btn { min-width: 160px; flex-shrink: 0; }
+
+    .result-wrap { min-height: calc(100vh - var(--module-bar-h)); display: flex; align-items: center; justify-content: center; padding: 40px; background: var(--bg); }
+    .result {
+      width: 560px; background: #fff; border: 2px solid var(--line); border-radius: 24px;
+      box-shadow: var(--shadow); text-align: center; padding: 48px 40px 36px;
+    }
+    .trophy { font-size: 72px; margin-bottom: 8px; animation: pop 0.5s ease; }
+    @keyframes pop {
+      0% { transform: scale(0.6); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result h2 { font-size: 30px; margin-bottom: 8px; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 24px 0 28px; }
+    .stat { border: 2px solid var(--line); border-radius: 14px; padding: 14px 8px; }
+    .stat b { display: block; font-size: 22px; }
+    .stat span { font-size: 12px; color: var(--muted); font-weight: 700; }
+    .result .btn { width: 100%; margin-top: 10px; }
+
+    .section-title { font-size: 18px; font-weight: 800; margin: 16px 0 8px; letter-spacing: -0.02em; }
+    figure img { max-width: 100%; max-height: 320px; display: block; margin: 0 auto; border-radius: 10px; }
+    figure { margin: 0 0 16px; }
+    figcaption { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .side-link {
+      display: block; text-decoration: none; color: var(--muted); font-weight: 700; font-size: 14px;
+      padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; text-align: center;
+    }
+    .side-link:hover { border-color: var(--blue); color: var(--blue-dark); }
+    .contact-box {
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .contact-box .contact-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .contact-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .contact-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 6px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .contact-btn:hover { border-color: var(--blue); color: var(--blue-dark); }
+    .contact-btn svg { width: 16px; height: 16px; flex-shrink: 0; display: block; }
+    button.contact-btn { font: inherit; cursor: pointer; }
+    .contact-wechat { position: relative; }
+    .wechat-qr {
+      display: none;
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 8px);
+      padding: 8px;
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      z-index: 50;
+      pointer-events: none;
+    }
+    .wechat-qr img {
+      width: 168px;
+      height: 168px;
+      object-fit: contain;
+      display: block;
+      border-radius: 8px;
+    }
+    .contact-wechat:hover .wechat-qr,
+    .contact-wechat:focus-visible .wechat-qr,
+    .contact-wechat:focus-within .wechat-qr {
+      display: block;
+    }
+    .muted { color: var(--muted); font-size: 15px; }
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 10px 16px; border-radius: 10px;
+      font-size: 14px; font-weight: 700; display: none; z-index: 20;
+    }
+    img {
+      -webkit-user-drag: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+  
+  </style>
+</head>
+<body>
+  <div id="app">
+    <nav class="module-bar" aria-label="学习模块">
+      <div class="module-switch">
+        <a id="modJava" href="/java/">Java <span>八股</span></a>
+        <a id="modAgent" href="/agent/">Agent <span>与大模型</span></a>
+        <a id="modStore" href="https://zdsai.store/">AI <span>神秘商店</span></a>
+      </div>
+    </nav>
+    <script>
+      (function () {
+        var p = location.pathname || "/";
+        if (p.slice(-11) === "/index.html") p = p.slice(0, -10);
+        if (p.slice(-1) === "/") p = p.slice(0, -1);
+        if (p.slice(-5) === "/java" || p.slice(-6) === "/agent") p = p.slice(0, p.lastIndexOf("/"));
+        var root = p;
+        var path = (location.pathname || "/").toLowerCase();
+        var agent = /(^|\/)agent(\/|$)/.test(path);
+        document.title = agent ? "Agent与大模型" : "Java 八股";
+        var javaTab = document.getElementById("modJava");
+        var agentTab = document.getElementById("modAgent");
+        if (javaTab) javaTab.setAttribute("href", root + "/java/");
+        if (agentTab) agentTab.setAttribute("href", root + "/agent/");
+        var cur = document.getElementById(agent ? "modAgent" : "modJava");
+        if (cur) cur.className += " active";
+        var qr = document.querySelector(".contact-wechat img");
+        if (qr) qr.setAttribute("src", root + "/wechat-qr.jpg");
+      })();
+    </script>
+    <section id="home" class="screen active">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="side-scroll" id="sideNav"></div>
+          <div class="sidebar-foot">
+            <div class="study-stat" id="studyStat">已学 <b>0</b> / 0</div>
+            <button class="side-action" onclick="startPractice()">🎲 随机摇题</button>
+            <div class="contact-box">
+              <div class="contact-title">联系作者</div>
+              <div class="contact-actions">
+                <button type="button" class="contact-btn contact-wechat" aria-label="微信，悬停查看二维码">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#07C160" d="M9.5 4C5.36 4 2 6.69 2 10c0 1.89 1.08 3.56 2.74 4.68L4 17l2.8-1.4c.84.24 1.74.38 2.7.4C9.16 15.37 9 14.71 9 14c0-3.87 3.8-7 8.5-7 .16 0 .33 0 .5.01C16.92 5.17 13.5 4 9.5 4zm-2 3.25a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM17.5 8C13.91 8 11 10.46 11 13.5S13.91 19 17.5 19c.84 0 1.64-.14 2.37-.38L22 19.5l-.66-1.74C22.41 16.7 23 15.16 23 13.5 23 10.46 20.09 8 17.5 8zm-1.75 3.25a.88.88 0 1 1 0 1.75.88.88 0 0 1 0-1.75zm3.5 0a.88.88 0 1 1 0 1.75.88.88 0 0 1 0-1.75z"/></svg>
+                  微信
+                  <span class="wechat-qr"><img src="/wechat-qr.jpg" alt="微信二维码"></span>
+                </button>
+                <a class="contact-btn" href="https://t.co/bwCfRWX0sg" target="_blank" rel="noopener noreferrer" aria-label="TG">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#26A5E4" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                  TG
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <main class="main">
+          <div class="hero">
+            <h1 id="catTitle">加载中…</h1>
+            <p id="catDesc"></p>
+            <div class="meta" id="catMeta"></div>
+            <div class="study-bar" id="catBar"><i></i></div>
+          </div>
+          <div class="grid" id="kpGrid"></div>
+        </main>
+      </div>
+    </section>
+
+    <section id="lesson" class="screen">
+      <div class="lesson-shell" id="lessonShell">
+        <div class="lesson-bar">
+          <button class="back-btn" onclick="goBackHome()" aria-label="返回主页">← 返回</button>
+          <div class="bar-title" id="barTitle">阅读知识点</div>
+          <div class="progress" id="progressWrap"><i id="bar"></i></div>
+          <div class="hearts" id="hearts">❤ 3</div>
+        </div>
+        <div class="lesson-main">
+          <aside class="lesson-toc" id="lessonToc"></aside>
+          <div class="lesson-stage">
+            <div class="lesson-body" id="lessonBody"></div>
+            <div class="lesson-footer" id="lessonFooter"></div>
+            <div class="sheet" id="sheet"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result" class="screen">
+      <div class="result-wrap">
+        <div class="result">
+          <div class="trophy" id="trophy">🎉</div>
+          <h2 id="resultTitle">本课完成</h2>
+          <p class="muted" id="resultDesc"></p>
+          <div class="stats">
+            <div class="stat"><b id="statAcc">0%</b><span>正确率</span></div>
+            <div class="stat"><b id="statMiss">0</b><span>答错次数</span></div>
+          </div>
+          <button class="btn btn-primary" onclick="goHome()">返回本章知识点</button>
+          <button class="btn btn-ghost" onclick="startPractice()">再来一轮摇题</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="content.js"></script>
+  <script>
+    (function protectContent() {
+      const block = (e) => e.preventDefault();
+      ["copy", "cut", "contextmenu", "dragstart"].forEach((evt) => {
+        document.addEventListener(evt, block, { capture: true });
+      });
+      document.addEventListener("keydown", (e) => {
+        const key = (e.key || "").toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && ["c", "x"].includes(key)) e.preventDefault();
+      }, { capture: true });
+    })();
+
+    const state = {
+      categories: [],
+      topics: [],
+      categoryId: "",
+      current: null,
+      mode: "lesson",
+      phase: "read",
+      step: 0,
+      total: 0,
+      hearts: 3,
+      correct: 0,
+      attempted: 0,
+      misses: 0,
+      selected: null,
+      cardFlipped: false,
+      queue: [],
+      done: {},
+      guideBack: null,
+      guideScroll: 0
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const findCat = (id) => state.categories.find((c) => c.id === id);
+    const topicsIn = (id) => state.topics.filter((t) => t.categoryId === id);
+
+    // ---- 当前模块（从路径 /java/ 或 /agent/ 识别）----
+    const MODULE_META = {
+      java: { id: "java", title: "Java 八股", brandHtml: "Java <span>八股</span>", doneKey: "java_done", compareTag: "Java" },
+      agent: { id: "agent", title: "Agent与大模型", brandHtml: "Agent <span>与大模型</span>", doneKey: "agent_bagu_done", compareTag: "Agent" }
+    };
+    function detectModule() {
+      const parts = (location.pathname || "/").split("/").filter(Boolean).map((s) => s.toLowerCase());
+      if (parts.includes("agent")) return "agent";
+      if (parts.includes("java")) return "java";
+      return "java";
+    }
+    const MODULE = detectModule();
+    const META = MODULE_META[MODULE];
+    document.title = META.title;
+    const javaTab = document.getElementById("modJava");
+    const agentTab = document.getElementById("modAgent");
+    if (javaTab) javaTab.classList.toggle("active", MODULE === "java");
+    if (agentTab) agentTab.classList.toggle("active", MODULE === "agent");
+    window.BAGU_MODULE = MODULE;
+    window.BAGU_COMPARE_TAG = META.compareTag;
+
+    // ---- 学习进度（每个浏览器各自保存在 localStorage，不需要登录） ----
+    const DONE_KEY = META.doneKey;
+    function loadDone() {
+      try {
+        const v = JSON.parse(localStorage.getItem(DONE_KEY) || "{}");
+        return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+      } catch (e) {
+        return {};
+      }
+    }
+    state.done = loadDone();
+    const isDone = (id) => !!(id && state.done[id]);
+    const doneIn = (list) => list.filter((t) => isDone(t.id)).length;
+    const isGuideTopic = (t) => t && t.categoryId === "guide";
+    const knowledgeTopics = (list) => (list || []).filter((t) => !isGuideTopic(t));
+    function studyPct(n, total) {
+      if (!total || n <= 0) return 0;
+      if (n >= total) return 100;
+      return Math.min(99, Math.max(1, Math.round((n / total) * 100)));
+    }
+
+    function setDone(id, on) {
+      if (!id) return;
+      if (on) state.done[id] = Date.now();
+      else delete state.done[id];
+      try { localStorage.setItem(DONE_KEY, JSON.stringify(state.done)); } catch (e) {}
+      updateStudyStat();
+    }
+
+    function updateStudyStat() {
+      const pub = knowledgeTopics(state.topics).filter((t) => t.status === "published");
+      const n = doneIn(pub);
+      $("studyStat").innerHTML = `已学 <b>${n}</b> / ${pub.length}`;
+    }
+
+    window.addEventListener("storage", (e) => {
+      if (e.key !== DONE_KEY) return;
+      state.done = loadDone();
+      updateStudyStat();
+      if ($("home").classList.contains("active")) { renderSidebar(); renderCategory(); }
+    });
+
+    function show(id) {
+      document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+      $(id).classList.add("active");
+    }
+
+    function toast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.style.display = "none"; }, 1800);
+    }
+
+    async function api(path) {
+      let url = path;
+      if (window.BAGU_STATIC) {
+        const base = siteBase();
+        if (path === "/api/catalog") url = base + "/data/catalog.json";
+        else if (path === "/api/topics") url = base + "/data/topics.json";
+        else {
+          const m = path.match(/^\/api\/topics\/([^/]+)$/);
+          if (!m) throw new Error("加载失败");
+          url = base + "/data/topics/" + encodeURIComponent(decodeURIComponent(m[1])) + ".json";
+        }
+      } else if (path.startsWith("/api/")) {
+        url = "/api/" + MODULE + path.slice(4);
+      }
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "加载失败");
+      return data;
+    }
+
+    function renderSidebar() {
+      const nav = $("sideNav");
+      let html = "";
+      let lastGroup = "";
+      state.categories.forEach((cat) => {
+        if (cat.group !== lastGroup) {
+          html += `<div class="group-label">${escapeHtml(cat.group)}</div>`;
+          lastGroup = cat.group;
+        }
+        const all = topicsIn(cat.id);
+        const done = doneIn(all);
+        const full = all.length > 0 && done === all.length;
+        html += `<button class="nav-btn ${cat.id === state.categoryId ? "active" : ""}" onclick="selectCategory('${cat.id}')">
+          <span>${escapeHtml(cat.name)}</span>
+          <span class="nav-count${full ? " all-done" : ""}" title="已学 ${done} / 共 ${all.length}">${done}/${all.length}</span>
+        </button>`;
+      });
+      nav.innerHTML = html;
+    }
+
+    function selectCategory(id) {
+      state.categoryId = id;
+      renderSidebar();
+      renderCategory();
+      show("home");
+    }
+
+    function renderCategory() {
+      const cat = findCat(state.categoryId);
+      if (!cat) return;
+      const items = topicsIn(cat.id);
+      $("catTitle").textContent = cat.name;
+      $("catDesc").textContent = cat.desc || "";
+      const doneN = doneIn(items);
+      const pct = studyPct(doneN, items.length);
+      $("catMeta").innerHTML = `<span>${items.length} 个知识点</span><span>已学 ${doneN} 个</span><span>完成 ${pct}%</span>`;
+      $("catBar").querySelector("i").style.width = pct + "%";
+      if (!items.length) {
+        $("kpGrid").innerHTML = `<div class="kp locked" style="grid-column:1/-1;cursor:default;opacity:1">
+          <div><div class="kp-title">这一章还没有内容</div><div class="kp-sub">这一章暂时还没有开放的知识点。</div></div>
+        </div>`;
+        return;
+      }
+      $("kpGrid").innerHTML = items.map((item, idx) => {
+        const ready = item.status === "published";
+        const done = ready && isDone(item.id);
+        const flag = !ready ? "未开放" : (done ? "已学完" : "未学");
+        return `<button class="kp ${ready ? "ready" : "locked"}${done ? " done" : ""}" onclick="openKnowledge('${item.id}')">
+          <div class="badge">${ready ? (idx + 1) : "🔒"}</div>
+          <div>
+            <div class="kp-title">${escapeHtml(displayTitle(item.title))}</div>
+            <div class="kp-sub">约 ${item.minutes} 分钟</div>
+          </div>
+          <span class="kp-flag ${done ? "flag-ready" : "flag-lock"}">${flag}</span>
+        </button>`;
+      }).join("");
+    }
+
+
+    function renderLessonToc() {
+      const shell = $("lessonShell");
+      const toc = $("lessonToc");
+      const random = state.mode === "practice" && !(state.current && state.current.categoryId);
+      shell.classList.toggle("no-toc", random);
+      if (random) {
+        toc.innerHTML = "";
+        return;
+      }
+      const cat = findCat(state.current.categoryId);
+      const items = topicsIn(state.current.categoryId);
+      toc.innerHTML = `
+        <div class="lesson-toc-head">
+          <div class="lesson-toc-kicker">本章知识点</div>
+          <div class="lesson-toc-cat">${escapeHtml((cat && cat.name) || "")}</div>
+        </div>
+        <div class="lesson-toc-scroll" id="lessonTocScroll">
+          ${items.map((item, idx) => {
+            const ready = item.status === "published";
+            const current = item.id === state.current.id;
+            const cls = `toc-item${current ? " active" : ""}${ready ? "" : " locked"}${isDone(item.id) ? " done" : ""}`;
+            const click = ready ? `onclick="openFromToc('${item.id}')"` : "disabled";
+            return `<button class="${cls}" ${click}>
+              <span class="toc-num">${idx + 1}</span>
+              <span class="toc-title">${escapeHtml(displayTitle(item.title))}</span>
+            </button>`;
+          }).join("")}
+        </div>`;
+      const active = toc.querySelector(".toc-item.active");
+      if (active) active.scrollIntoView({ block: "nearest" });
+    }
+
+    function openFromToc(id) {
+      if (state.current && state.current.id === id && state.phase === "read") return;
+      if (state.phase === "practice" && !confirm("要切换到其他知识点吗？当前练习进度不会保存。")) return;
+      openKnowledge(id, state.guideBack);
+    }
+
+    async function openKnowledge(id, guideBack) {
+      const item = state.topics.find((t) => t.id === id);
+      if (!item || item.status !== "published") {
+        toast("这个知识点还没发布。");
+        return;
+      }
+      try {
+        const topic = await api("/api/topics/" + encodeURIComponent(id));
+        startLesson(topic, guideBack);
+      } catch (e) {
+        toast(e.message);
+      }
+    }
+
+    function setProgress() {
+      const pct = state.total ? (state.step / state.total) * 100 : 0;
+      $("bar").style.width = Math.min(100, pct) + "%";
+      $("hearts").textContent = "❤ " + state.hearts;
+    }
+
+    function setChrome(phase) {
+      const reading = phase === "read";
+      $("barTitle").style.display = reading ? "block" : "none";
+      $("barTitle").textContent = "阅读 · " + ((state.current && displayTitle(state.current.title)) || "知识点");
+      $("progressWrap").style.display = reading ? "none" : "block";
+      $("hearts").style.display = reading ? "none" : "block";
+    }
+
+    function startLesson(topic, guideBack) {
+      state.current = topic;
+      state.guideBack = guideBack && guideBack !== topic.id ? guideBack : null;
+      state.mode = "lesson";
+      state.phase = "read";
+      state.step = 0;
+      state.hearts = 3;
+      state.correct = 0;
+      state.attempted = 0;
+      state.misses = 0;
+      state.queue = [];
+      state.total = 0;
+      $("lessonShell").classList.remove("no-toc");
+      show("lesson");
+      renderLessonToc();
+      renderReading();
+    }
+
+    function renderReading() {
+      setChrome("read");
+      $("sheet").className = "sheet";
+      $("sheet").innerHTML = "";
+      $("lessonFooter").classList.remove("hidden");
+      const cat = findCat(state.current.categoryId);
+      $("lessonBody").innerHTML = `<div class="kicker">${escapeHtml((cat && cat.name) || "")} · 知识点阅读</div>
+        <h2>${escapeHtml(displayTitle(state.current.title))}</h2>
+        ${renderBlocks(state.current.blocks || [])}`;
+      if (state.current.categoryId === "guide") linkGuideLists($("lessonBody"));
+      renderReadingFooter();
+      $("lessonBody").scrollTop = 0;
+      renderLessonToc();
+    }
+
+    function renderReadingFooter() {
+      const done = isDone(state.current.id);
+      const toggle = `<button class="btn btn-ghost btn-done${done ? " on" : ""}" onclick="toggleDone()" title="${done ? "点击取消已学完标记" : "把这个知识点记为已学完"}">${done ? "✓ 已学完 · 取消" : "标记为已学完"}</button>`;
+      const back = state.guideBack ? `<button class="btn btn-ghost" onclick="backToGuide()">← 返回导学</button>` : "";
+      const qs = state.current.questions || [];
+      const main = qs.length
+        ? `<button class="btn btn-primary" onclick="beginPractice()">我看完了，开始练习</button>`
+        : `<button class="btn btn-primary" onclick="finishReading()">阅读完成，返回</button>`;
+      $("lessonFooter").innerHTML = toggle + back + main;
+    }
+
+    function toggleDone() {
+      if (!state.current || !state.current.id) return;
+      const on = !isDone(state.current.id);
+      setDone(state.current.id, on);
+      toast(on ? "已标记为学完" : "已取消学完标记");
+      renderReadingFooter();
+      renderLessonToc();
+    }
+
+    function finishReading() {
+      if (state.current && state.current.id && !isGuideTopic(state.current)) setDone(state.current.id, true);
+      if (state.guideBack) return backToGuide();
+      goHome();
+    }
+
+    // ---- 导学清单：条目渲染时匹配到知识点并可点击跳转 ----
+    function linkGuideLists(root) {
+      const article = root.querySelector(".article");
+      if (!article) return;
+      const pool = state.topics.filter((t) => t.status === "published");
+      let cats = [];
+      Array.from(article.children).forEach((el) => {
+        if (el.tagName === "H3") {
+          cats = guideHeadingCategories(el.textContent, state.categories);
+          return;
+        }
+        if (el.tagName !== "UL" && el.tagName !== "OL") return;
+        el.querySelectorAll("li").forEach((li) => {
+          const inline = Array.from(li.childNodes).filter((n) => !(n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName)));
+          const text = inline.map((n) => n.textContent).join("").trim();
+          if (!text) return;
+          const segs = linkGuideItem(text, cats, pool, state.categories);
+          if (!segs.some((x) => x.topic)) return;
+          const makeLink = (topic) => {
+            const a = document.createElement("a");
+            a.href = "#";
+            a.className = "guide-link" + (isDone(topic.id) ? " done" : "");
+            a.dataset.topic = topic.id;
+            a.title = "跳转到：" + displayTitle(topic.title);
+            return a;
+          };
+          if (segs.length === 1) {
+            const a = makeLink(segs[0].topic);
+            inline.forEach((n) => a.appendChild(n));
+            li.insertBefore(a, li.firstChild);
+          } else {
+            inline.forEach((n) => n.remove());
+            const span = document.createElement("span");
+            segs.forEach((seg, i) => {
+              if (i) span.appendChild(document.createTextNode(" / "));
+              if (seg.topic) {
+                const a = makeLink(seg.topic);
+                a.textContent = seg.text;
+                span.appendChild(a);
+              } else {
+                span.appendChild(document.createTextNode(seg.text));
+              }
+            });
+            li.insertBefore(span, li.firstChild);
+          }
+        });
+      });
+    }
+
+    function openFromGuide(id) {
+      if (!state.current) return;
+      state.guideScroll = $("lessonBody").scrollTop;
+      openKnowledge(id, state.current.id);
+    }
+
+    async function backToGuide() {
+      const id = state.guideBack;
+      if (!id) return goHome();
+      const scroll = state.guideScroll || 0;
+      await openKnowledge(id);
+      $("lessonBody").scrollTop = scroll;
+    }
+
+    document.addEventListener("click", (e) => {
+      const link = e.target.closest && e.target.closest("#lessonBody .guide-link");
+      if (!link) return;
+      e.preventDefault();
+      openFromGuide(link.dataset.topic);
+    });
+
+    function beginPractice() {
+      const questions = (state.current && state.current.questions) || [];
+      if (!questions.length) return goHome();
+      state.phase = "practice";
+      state.mode = "lesson";
+      state.step = 0;
+      state.hearts = 3;
+      state.correct = 0;
+      state.attempted = 0;
+      state.misses = 0;
+      state.queue = questions.map((q) => ({ kind: "quiz", data: q }));
+      state.total = state.queue.length;
+      renderLessonToc();
+      renderStep();
+    }
+
+    async function startPractice() {
+      try {
+        const data = await api("/api/topics");
+        const questions = [];
+        (data.topics || []).forEach((t) => {
+          if (t.status === "published") {
+            (t.questions || []).forEach((q) => questions.push(q));
+          }
+        });
+        if (!questions.length) {
+          toast("还没有可练习的题目，请先发布带练习的知识点。");
+          return;
+        }
+        questions.sort(() => Math.random() - 0.5);
+        state.current = { title: "随机摇题", questions };
+        state.mode = "practice";
+        state.phase = "practice";
+        state.step = 0;
+        state.hearts = 3;
+        state.correct = 0;
+        state.attempted = 0;
+        state.misses = 0;
+        state.queue = questions.map((q) => ({ kind: "quiz", data: q }));
+        state.total = state.queue.length;
+        show("lesson");
+        renderLessonToc();
+        renderStep();
+      } catch (e) {
+        toast(e.message);
+      }
+    }
+
+    function goBackHome() {
+      if (state.phase === "practice" && !confirm("要先退出练习吗？当前答题进度不会保存。")) return;
+      goHome();
+    }
+
+    function goHome() {
+      updateStudyStat();
+      renderSidebar();
+      renderCategory();
+      show("home");
+    }
+
+    function renderStep() {
+      setChrome("practice");
+      $("sheet").className = "sheet";
+      $("sheet").innerHTML = "";
+      $("lessonFooter").classList.remove("hidden");
+      setProgress();
+      if (state.step >= state.queue.length || state.hearts <= 0) return finish();
+      renderQuiz(state.queue[state.step].data);
+    }
+
+    function renderQuiz(q) {
+      state.selected = null;
+      state.cardFlipped = false;
+      if (q.type === "card") {
+        $("lessonBody").innerHTML = `
+          <div class="kicker">记忆卡片 · 先想再翻</div>
+          <p class="prompt">${escapeHtml(q.front)}</p>
+          <div class="flip-wrap">
+            <div class="flip" id="flipCard" onclick="flipCard()">
+              <div class="face front">
+                <h3>先在心里答一遍</h3>
+                <div class="hint">点击卡片查看解析</div>
+              </div>
+              <div class="face back">
+                <p>${escapeHtml(q.back)}</p>
+                <div class="hint">确认后点下面的按钮</div>
+              </div>
+            </div>
+          </div>`;
+        $("lessonFooter").innerHTML = `
+          <button class="btn btn-ghost" onclick="answerCard(false)">再看看</button>
+          <button class="btn btn-primary" onclick="answerCard(true)">记住了</button>`;
+        return;
+      }
+      const options = q.options || [];
+      $("lessonBody").innerHTML = `
+        <div class="kicker">小练习</div>
+        <p class="prompt">${escapeHtml(q.prompt)}</p>
+        <div class="choices">
+          ${options.map((opt, i) => `<button class="choice" onclick="selectChoice(${i})" id="opt${i}">${escapeHtml(opt)}</button>`).join("")}
+        </div>`;
+      $("lessonFooter").innerHTML = `<button class="btn btn-primary" id="checkBtn" disabled onclick="checkAnswer()">检查</button>`;
+    }
+
+    function flipCard() {
+      state.cardFlipped = true;
+      $("flipCard").classList.toggle("flipped");
+    }
+
+    function selectChoice(i) {
+      if ($("sheet").classList.contains("show")) return;
+      state.selected = i;
+      document.querySelectorAll(".choice").forEach((el, idx) => el.classList.toggle("selected", idx === i));
+      $("checkBtn").disabled = false;
+    }
+
+    function checkAnswer() {
+      const q = state.queue[state.step].data;
+      if (state.selected === null) return;
+      const ok = state.selected === q.answer;
+      state.attempted += 1;
+      document.querySelectorAll(".choice").forEach((el, idx) => {
+        el.disabled = true;
+        if (idx === q.answer) el.classList.add("correct");
+        else if (idx === state.selected && !ok) el.classList.add("wrong");
+        el.classList.remove("selected");
+      });
+      feedback(ok, q.explain);
+    }
+
+    function answerCard(remembered) {
+      const q = state.queue[state.step].data;
+      if (!state.cardFlipped) {
+        $("flipCard").classList.add("flipped");
+        state.cardFlipped = true;
+      }
+      state.attempted += 1;
+      feedback(remembered, q.explain || q.back);
+    }
+
+    function feedback(ok, explain) {
+      if (ok) state.correct += 1;
+      else {
+        state.misses += 1;
+        state.hearts -= 1;
+        setProgress();
+      }
+      const sheet = $("sheet");
+      sheet.className = "sheet show " + (ok ? "ok" : "bad");
+      sheet.innerHTML = `
+        <div class="sheet-copy">
+          <h4>${ok ? "正确！" : (state.hearts <= 0 ? "心数用完了" : "再看一眼")}</h4>
+          <p>${escapeHtml(explain || "")}</p>
+        </div>
+        <button class="btn ${ok ? "btn-primary" : "btn-danger"}" onclick="afterFeedback()">${ok ? "继续" : (state.hearts <= 0 ? "查看结果" : "继续")}</button>`;
+      $("lessonFooter").classList.add("hidden");
+    }
+
+    function afterFeedback() {
+      if (state.hearts <= 0) return finish();
+      nextStep();
+    }
+
+    function nextStep() {
+      state.step += 1;
+      setProgress();
+      if (state.step >= state.queue.length) finish();
+      else renderStep();
+    }
+
+    function finish() {
+      const failed = state.hearts <= 0;
+      const acc = state.attempted ? Math.round((state.correct / state.attempted) * 100) : 0;
+      if (!failed && state.mode === "lesson" && state.current && state.current.id) setDone(state.current.id, true);
+      $("trophy").textContent = failed ? "💪" : "🎉";
+      $("resultTitle").textContent = failed ? "差一点点" : (state.mode === "practice" ? "摇题完成" : "本课完成");
+      $("resultDesc").textContent = failed
+        ? "心数用完了，先回去看看讲解，再来挑战一次。"
+        : "讲解过了，练习也过了。随机摇题可以随时拿来复习。";
+      $("statAcc").textContent = acc + "%";
+      $("statMiss").textContent = String(state.misses);
+      show("result");
+    }
+
+    api("/api/catalog").then((data) => {
+      state.categories = data.categories || [];
+      state.topics = data.topics || [];
+      state.categoryId = (state.categories[0] && state.categories[0].id) || "";
+      updateStudyStat();
+      renderSidebar();
+      renderCategory();
+    }).catch((e) => {
+      $("catTitle").textContent = "无法加载内容";
+      $("catDesc").textContent = "请通过本地服务打开学习页（http://127.0.0.1:8082/），不要直接双击打开文件。";
+      toast(e.message);
+    });
+  </script>
+</body>
+</html>
